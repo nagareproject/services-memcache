@@ -43,10 +43,14 @@ class Lock(object):
         while not self.connection.add(self.lock, 1, self.ttl) and (time.time() < (t0 + self.max_wait_time)):
             time.sleep(self.poll_time)
 
-    def release(self):
+    __enter__ = acquire
+
+    def release(self, *args):
         """Release the lock
         """
         self.connection.delete(self.lock)
+
+    __exit__ = release
 
 
 class Memcache(plugin.Plugin):

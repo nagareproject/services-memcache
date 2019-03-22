@@ -77,7 +77,7 @@ class Memcache(plugin.Plugin):
         super(Memcache, self).__init__(name, dist)
 
         hosts = list(hosts.values()) or [{'host': host, 'port': port}]
-        self.hosts = ['{}:{}'.format(host['host'], host['port']) for host in hosts]
+        self.hosts = ['{}:{}'.format(h['host'], h['port']) for h in hosts]
         self.debug = debug
 
         self.memcache = None

@@ -57,13 +57,16 @@ class Memcache(plugin.Plugin):
     """Sessions manager for sessions kept in an external memcached server
     """
     LOAD_PRIORITY = 75
-    CONFIG_SPEC = {
-        'host': 'string(default="127.0.0.1")',
-        'port': 'integer(default=11211)',
-        'debug': 'boolean(default=False)'
-    }
+    CONFIG_SPEC = dict(
+        plugin.Plugin.CONFIG_SPEC,
+        debug='boolean(default=False)',
+        __many__={
+            'host': 'string(default="127.0.0.1")',
+            'port': 'integer(default=11211)',
+        }
+    )
 
-    def __init__(self, name, dist, host='127.0.0.1', port=11211, debug=False):
+    def __init__(self, name, dist, host='127.0.0.1', port=11211, debug=False, **hosts):
         """Initialization
 
         In:
@@ -73,7 +76,8 @@ class Memcache(plugin.Plugin):
         """
         super(Memcache, self).__init__(name, dist)
 
-        self.hosts = ['%s:%d' % (host, port)]
+        hosts = list(hosts.values()) or [{'host': host, 'port': port}]
+        self.hosts = ['{}:{}'.format(host['host'], host['port']) for host in hosts]
         self.debug = debug
 
         self.memcache = None

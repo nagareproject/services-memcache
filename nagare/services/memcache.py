@@ -20,7 +20,7 @@ KEY_PREFIX = 'nagare_%d_'
 
 
 class Lock(object):
-    def __init__(self, connection, lock_id, ttl, poll_time, max_wait_time):
+    def __init__(self, connection, lock_id, ttl, poll_time, max_wait_time, noreply=False):
         """Distributed lock in memcache
 
         In:
@@ -35,13 +35,22 @@ class Lock(object):
         self.ttl = ttl
         self.poll_time = poll_time
         self.max_wait_time = max_wait_time
+        self.noreply = False
 
     def acquire(self):
         """Acquire the lock
         """
         t0 = time.time()
-        while not self.connection.add(self.lock, 1, self.ttl) and (time.time() < (t0 + self.max_wait_time)):
+
+        status = False
+        while not status and (time.time() < (t0 + self.max_wait_time)):
+            status = self.connection.add(self.lock, 1, self.ttl, noreply=self.noreply)
+            if type(status) is int:
+                break
+
             time.sleep(self.poll_time)
+
+        return status
 
     __enter__ = acquire
 
@@ -60,13 +69,29 @@ class Memcache(plugin.Plugin):
     CONFIG_SPEC = dict(
         plugin.Plugin.CONFIG_SPEC,
         debug='boolean(default=False)',
+        max_key_length='integer(default={})'.format(memcache.SERVER_MAX_KEY_LENGTH),
+        max_value_length='integer(default={})'.format(memcache.SERVER_MAX_VALUE_LENGTH),
+        dead_retry='integer(default={})'.format(memcache._DEAD_RETRY),
+        check_keys='boolean(default=False)',
         __many__={
+            'socket': 'string(default=None)',
             'host': 'string(default="127.0.0.1")',
             'port': 'integer(default=11211)',
+            'weight': 'integer(default=1)'
         }
     )
 
-    def __init__(self, name, dist, host='127.0.0.1', port=11211, debug=False, **hosts):
+    def __init__(
+        self,
+        name, dist,
+        socket=None, host='127.0.0.1', port=11211, weight=1,
+        debug=False,
+        max_key_length=memcache.SERVER_MAX_KEY_LENGTH,
+        max_value_length=memcache.SERVER_MAX_VALUE_LENGTH,
+        dead_retry=memcache._DEAD_RETRY,
+        check_keys=False,
+        **hosts
+    ):
         """Initialization
 
         In:
@@ -76,14 +101,29 @@ class Memcache(plugin.Plugin):
         """
         super(Memcache, self).__init__(name, dist)
 
-        hosts = list(hosts.values()) or [{'host': host, 'port': port}]
-        self.hosts = ['{}:{}'.format(h['host'], h['port']) for h in hosts]
+        hosts = list(hosts.values()) or [{'socket': socket, 'host': host, 'port': port, 'weight': weight}]
+        self.hosts = [
+            (
+                'unix:{}'.format(h['socket']) if h['socket'] else '{}:{}'.format(h['host'], h['port']),
+                h['weight']
+            ) for h in hosts
+        ]
         self.debug = debug
+        self.max_key_length = max_key_length
+        self.max_value_length = max_value_length
+        self.dead_retry = dead_retry
+        self.check_keys = check_keys
 
         self.memcache = None
 
     def handle_start(self, app):
-        self.memcache = memcache.Client(self.hosts, debug=self.debug)
+        self.memcache = memcache.Client(
+            self.hosts, self.debug, -1,
+            server_max_key_length=self.max_key_length,
+            server_max_value_length=self.max_value_length,
+            dead_retry=self.dead_retry,
+            check_keys=self.check_keys
+        )
 
         for name, f in memcache.Client.__dict__.items():
             if not name.startswith(('_', 'Memcached')):
@@ -95,7 +135,7 @@ class Memcache(plugin.Plugin):
         memcached = memcache.Client(self.hosts, debug=self.debug)
         memcached.flush_all()
 
-    def get_lock(self, lock_id, lock_ttl, lock_poll_time, lock_max_wait_time):
+    def get_lock(self, lock_id, lock_ttl, lock_poll_time, lock_max_wait_time, noreply=False):
         """Retrieve the lock of a session
 
         In:
@@ -104,4 +144,4 @@ class Memcache(plugin.Plugin):
         Return:
           - the lock
         """
-        return Lock(self, lock_id, lock_ttl, lock_poll_time, lock_max_wait_time)
+        return Lock(self, lock_id, lock_ttl, lock_poll_time, lock_max_wait_time, noreply)

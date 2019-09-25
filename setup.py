@@ -32,6 +32,14 @@ setup(
     use_scm_version=True,
     install_requires=['python-memcached', 'nagare-server'],
     entry_points='''
+        [nagare.commands]
+        memcache = nagare.admin.memcache:Commands
+
+        [nagare.commands.memcache]
+        flush = nagare.admin.memcache:Flush
+        stats = nagare.admin.memcache:Stats
+        report = nagare.admin.memcache:Report
+
         [nagare.services]
         memcache = nagare.services.memcache:Memcache
     '''

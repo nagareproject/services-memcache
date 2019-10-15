@@ -70,7 +70,7 @@ class Memcache(plugin.Plugin):
         plugin.Plugin.CONFIG_SPEC,
         debug='boolean(default=False)',
         max_key_length='integer(default={})'.format(memcache.SERVER_MAX_KEY_LENGTH),
-        max_value_length='integer(default={})'.format(memcache.SERVER_MAX_VALUE_LENGTH),
+        max_value_length='integer(default=0)',
         dead_retry='integer(default={})'.format(memcache._DEAD_RETRY),
         check_keys='boolean(default=False)',
         __many__={
@@ -120,7 +120,6 @@ class Memcache(plugin.Plugin):
         self.memcache = memcache.Client(
             self.hosts, self.debug, -1,
             server_max_key_length=self.max_key_length,
-            server_max_value_length=self.max_value_length,
             dead_retry=self.dead_retry,
             check_keys=self.check_keys
         )
@@ -128,6 +127,21 @@ class Memcache(plugin.Plugin):
         for name, f in memcache.Client.__dict__.items():
             if not name.startswith(('_', 'Memcached')):
                 setattr(self, name, partial(f, self.memcache))
+
+        server_max_value_lengths = [
+            int(settings.get('item_size_max', '0'))
+            for host, settings in self.get_stats('settings')
+        ]
+        server_max_value_length = min(server_max_value_lengths) if server_max_value_lengths else 0
+
+        if server_max_value_length and self.max_value_length and (server_max_value_length != self.max_value_length):
+            msg = 'Memcache configuration value `max_value_length` differs from detected value {}'
+            self.logger.warning(msg.format(server_max_value_length))
+
+        server_max_value_length = server_max_value_length or self.max_value_length or memcache.SERVER_MAX_VALUE_LENGTH
+        self.memcache.server_max_value_length = server_max_value_length
+        msg = 'Memcache `max_value_length` parameter set to {}'
+        self.logger.info(msg.format(self.memcache.server_max_value_length))
 
     def flush_all(self):
         """Delete all the contents in the memcached server

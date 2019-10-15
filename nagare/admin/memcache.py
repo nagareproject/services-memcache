@@ -15,7 +15,7 @@ class Commands(command.Commands):
 
 
 class Stats(command.Command):
-    DESC = 'displays general statistiques'
+    DESC = 'displays general statistics'
     WITH_STARTED_SERVICES = True
 
     def run(self, memcache_service, name=None):

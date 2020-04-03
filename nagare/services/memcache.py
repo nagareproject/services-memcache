@@ -1,5 +1,5 @@
 # --
-# Copyright (c) 2008-2019 Net-ng.
+# Copyright (c) 2008-2020 Net-ng.
 # All rights reserved.
 #
 # This software is licensed under the BSD License, as described in
@@ -99,7 +99,16 @@ class Memcache(plugin.Plugin):
           - ``port`` -- port of the memcache server
           - ``debug`` -- display the memcache requests / responses
         """
-        super(Memcache, self).__init__(name, dist)
+        super(Memcache, self).__init__(
+            name, dist,
+            socket=socket, host=host, port=port, weight=weight,
+            debug=debug,
+            max_key_length=max_key_length,
+            max_value_length=max_value_length,
+            dead_retry=dead_retry,
+            check_keys=check_keys,
+            **hosts
+        )
 
         hosts = list(hosts.values()) or [{'socket': socket, 'host': host, 'port': port, 'weight': weight}]
         self.hosts = [

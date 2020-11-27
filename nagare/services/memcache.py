@@ -11,8 +11,12 @@ from __future__ import absolute_import
 
 import time
 from functools import partial
-
+try:
+    import urlparse
+except ImportError:
+    import urllib.parse as urlparse
 import memcache
+
 from nagare.services import plugin
 
 
@@ -68,12 +72,20 @@ class Memcache(plugin.Plugin):
     LOAD_PRIORITY = 75
     CONFIG_SPEC = dict(
         plugin.Plugin.CONFIG_SPEC,
+        uri='string(default=None)',
+        socket='string(default=None)',
+        host='string(default="127.0.0.1")',
+        port='integer(default=11211)',
+        weight='integer(default=1)',
+
         debug='boolean(default=False)',
         max_key_length='integer(default={})'.format(memcache.SERVER_MAX_KEY_LENGTH),
         max_value_length='integer(default=0)',
         dead_retry='integer(default={})'.format(memcache._DEAD_RETRY),
         check_keys='boolean(default=False)',
+
         __many__={
+            'uri': 'string(default=None)',
             'socket': 'string(default=None)',
             'host': 'string(default="127.0.0.1")',
             'port': 'integer(default=11211)',
@@ -84,7 +96,7 @@ class Memcache(plugin.Plugin):
     def __init__(
         self,
         name, dist,
-        socket=None, host='127.0.0.1', port=11211, weight=1,
+        uri=None, socket=None, host='127.0.0.1', port=11211, weight=1,
         debug=False,
         max_key_length=memcache.SERVER_MAX_KEY_LENGTH,
         max_value_length=memcache.SERVER_MAX_VALUE_LENGTH,
@@ -101,7 +113,7 @@ class Memcache(plugin.Plugin):
         """
         super(Memcache, self).__init__(
             name, dist,
-            socket=socket, host=host, port=port, weight=weight,
+            uri=uri, socket=socket, host=host, port=port, weight=weight,
             debug=debug,
             max_key_length=max_key_length,
             max_value_length=max_value_length,
@@ -110,13 +122,22 @@ class Memcache(plugin.Plugin):
             **hosts
         )
 
-        hosts = list(hosts.values()) or [{'socket': socket, 'host': host, 'port': port, 'weight': weight}]
-        self.hosts = [
-            (
-                'unix:{}'.format(h['socket']) if h['socket'] else '{}:{}'.format(h['host'], h['port']),
-                h['weight']
-            ) for h in hosts
-        ]
+        self.hosts = []
+        hosts = list(hosts.values()) or [{'uri': uri, 'socket': socket, 'host': host, 'port': port, 'weight': weight}]
+        for host in hosts:
+            if host['host'] and host['port']:
+                addr = '{}:{}'.format(host['host'], host['port'])
+
+            if host['socket']:
+                addr = 'unix:{}'.format(host['socket'])
+
+            if host['uri']:
+                uri = urlparse.urlparse(host['uri'])
+                if uri.scheme == 'memcached':
+                    addr = '{}:{}'.format(uri.hostname or '127.0.0.1', uri.port or 11211)
+
+            self.hosts.append(addr)
+
         self.debug = debug
         self.max_key_length = max_key_length
         self.max_value_length = max_value_length

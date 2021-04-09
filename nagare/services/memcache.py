@@ -49,7 +49,7 @@ class Lock(object):
         status = False
         while not status and (time.time() < (t0 + self.max_wait_time)):
             status = self.connection.add(self.lock, 1, self.ttl, noreply=self.noreply)
-            if type(status) is int:
+            if status or (type(status) is int):
                 break
 
             time.sleep(self.poll_time)

@@ -45,6 +45,7 @@ class Lock(object):
         """Acquire the lock
         """
         t0 = time.time()
+        attempt = 0
 
         status = False
         while not status and (time.time() < (t0 + self.max_wait_time)):
@@ -52,7 +53,11 @@ class Lock(object):
             if status or (type(status) is int):
                 break
 
+            attempt += 1
+            self.connection.logger.warn("Attempt {} to acquire lock {}".format(attempt, self.lock))
             time.sleep(self.poll_time)
+        else:
+            self.connection.logger.error("Can't acquire lock {}".format(self.lock))
 
         return status
 

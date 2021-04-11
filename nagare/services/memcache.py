@@ -44,11 +44,10 @@ class Lock(object):
     def acquire(self):
         """Acquire the lock
         """
-        t0 = time.time()
         attempt = 0
+        t0 = time.time()
 
-        status = False
-        while not status and (time.time() < (t0 + self.max_wait_time)):
+        while time.time() < (t0 + self.max_wait_time):
             status = self.connection.add(self.lock, 1, self.ttl, noreply=self.noreply)
             if status or (type(status) is int):
                 break

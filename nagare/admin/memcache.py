@@ -1,5 +1,5 @@
 # --
-# Copyright (c) 2008-2021 Net-ng.
+# Copyright (c) 2008-2022 Net-ng.
 # All rights reserved.
 #
 # This software is licensed under the BSD License, as described in
@@ -50,7 +50,7 @@ class Report(Stats):
 
 
 class Flush(command.Command):
-    DESC = 'full all the keys in cache'
+    DESC = 'delete all the keys in cache'
     WITH_STARTED_SERVICES = True
 
     def run(self, memcache_service):

@@ -1,0 +1,10 @@
+[nagare.commands]
+memcache = nagare.admin.memcache:Commands
+
+[nagare.commands.memcache]
+flush = nagare.admin.memcache:Flush
+stats = nagare.admin.memcache:Stats
+report = nagare.admin.memcache:Report
+
+[nagare.services]
+memcache = nagare.services.memcache:Memcache

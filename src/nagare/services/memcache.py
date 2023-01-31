@@ -1,5 +1,5 @@
 # --
-# Copyright (c) 2008-2022 Net-ng.
+# Copyright (c) 2008-2023 Net-ng.
 # All rights reserved.
 #
 # This software is licensed under the BSD License, as described in
@@ -9,23 +9,22 @@
 
 from __future__ import absolute_import
 
-import time
 from functools import partial
+import time
+
 try:
     import urlparse
 except ImportError:
     import urllib.parse as urlparse
 import memcache
-
 from nagare.services import plugin
-
 
 KEY_PREFIX = 'nagare_%d_'
 
 
 class Lock(object):
     def __init__(self, connection, lock_id, ttl, poll_time, max_wait_time, noreply=False):
-        """Distributed lock in memcache
+        """Distributed lock in memcache.
 
         In:
           - ``connection`` -- connection object to the memcache server
@@ -42,8 +41,7 @@ class Lock(object):
         self.noreply = False
 
     def acquire(self):
-        """Acquire the lock
-        """
+        """Acquire the lock."""
         attempt = 0
         t0 = time.time()
 
@@ -53,7 +51,7 @@ class Lock(object):
                 break
 
             attempt += 1
-            self.connection.logger.warn("Attempt {} to acquire lock {}".format(attempt, self.lock))
+            self.connection.logger.warning('Attempt {} to acquire lock {}'.format(attempt, self.lock))
             time.sleep(self.poll_time)
         else:
             self.connection.logger.error("Can't acquire lock {}".format(self.lock))
@@ -63,16 +61,15 @@ class Lock(object):
     __enter__ = acquire
 
     def release(self, *args):
-        """Release the lock
-        """
+        """Release the lock."""
         self.connection.delete(self.lock)
 
     __exit__ = release
 
 
 class Memcache(plugin.Plugin):
-    """Sessions manager for sessions kept in an external memcached server
-    """
+    """Sessions manager for sessions kept in an external memcached server."""
+
     LOAD_PRIORITY = 75
     CONFIG_SPEC = dict(
         plugin.Plugin.CONFIG_SPEC,
@@ -81,34 +78,37 @@ class Memcache(plugin.Plugin):
         host='string(default="127.0.0.1")',
         port='integer(default=11211)',
         weight='integer(default=1)',
-
         debug='boolean(default=False)',
         max_key_length='integer(default={})'.format(memcache.SERVER_MAX_KEY_LENGTH),
         max_value_length='integer(default=0)',
         dead_retry='integer(default={})'.format(memcache._DEAD_RETRY),
         check_keys='boolean(default=False)',
-
         __many__={
             'uri': 'string(default=None)',
             'socket': 'string(default=None)',
             'host': 'string(default="127.0.0.1")',
             'port': 'integer(default=11211)',
-            'weight': 'integer(default=1)'
-        }
+            'weight': 'integer(default=1)',
+        },
     )
 
     def __init__(
         self,
-        name, dist,
-        uri=None, socket=None, host='127.0.0.1', port=11211, weight=1,
+        name,
+        dist,
+        uri=None,
+        socket=None,
+        host='127.0.0.1',
+        port=11211,
+        weight=1,
         debug=False,
         max_key_length=memcache.SERVER_MAX_KEY_LENGTH,
         max_value_length=memcache.SERVER_MAX_VALUE_LENGTH,
         dead_retry=memcache._DEAD_RETRY,
         check_keys=False,
-        **hosts
+        **hosts,
     ):
-        """Initialization
+        """Initialization.
 
         In:
           - ``host`` -- address of the memcache server
@@ -116,14 +116,19 @@ class Memcache(plugin.Plugin):
           - ``debug`` -- display the memcache requests / responses
         """
         super(Memcache, self).__init__(
-            name, dist,
-            uri=uri, socket=socket, host=host, port=port, weight=weight,
+            name,
+            dist,
+            uri=uri,
+            socket=socket,
+            host=host,
+            port=port,
+            weight=weight,
             debug=debug,
             max_key_length=max_key_length,
             max_value_length=max_value_length,
             dead_retry=dead_retry,
             check_keys=check_keys,
-            **hosts
+            **hosts,
         )
 
         self.hosts = []
@@ -152,10 +157,12 @@ class Memcache(plugin.Plugin):
 
     def handle_start(self, app):
         self.memcache = memcache.Client(
-            self.hosts, self.debug, -1,
+            self.hosts,
+            self.debug,
+            -1,
             server_max_key_length=self.max_key_length,
             dead_retry=self.dead_retry,
-            check_keys=self.check_keys
+            check_keys=self.check_keys,
         )
 
         for name, f in memcache.Client.__dict__.items():
@@ -163,8 +170,7 @@ class Memcache(plugin.Plugin):
                 setattr(self, name, partial(f, self.memcache))
 
         server_max_value_lengths = [
-            int(settings.get('item_size_max', '0'))
-            for host, settings in self.get_stats('settings')
+            int(settings.get('item_size_max', '0')) for host, settings in self.get_stats('settings')
         ]
         server_max_value_length = min(server_max_value_lengths) if server_max_value_lengths else 0
 
@@ -178,13 +184,12 @@ class Memcache(plugin.Plugin):
         self.logger.info(msg.format(self.memcache.server_max_value_length))
 
     def flush_all(self):
-        """Delete all the contents in the memcached server
-        """
+        """Delete all the contents in the memcached server."""
         memcached = memcache.Client(self.hosts, debug=self.debug)
         memcached.flush_all()
 
     def get_lock(self, lock_id, lock_ttl, lock_poll_time, lock_max_wait_time, noreply=False):
-        """Retrieve the lock of a session
+        """Retrieve the lock of a session.
 
         In:
           - ``lock_id`` -- lock identifier

@@ -1,5 +1,5 @@
 # --
-# Copyright (c) 2008-2022 Net-ng.
+# Copyright (c) 2008-2023 Net-ng.
 # All rights reserved.
 #
 # This software is licensed under the BSD License, as described in
@@ -43,7 +43,7 @@ class Report(Stats):
         parser.add_argument(
             'name',
             choices=sorted(('settings', 'items', 'sizes', 'sizes_enable', 'sizes_disable', 'slabs', 'conns')),
-            help='name of report to display'
+            help='name of report to display',
         )
 
         super(Report, self).set_arguments(parser)

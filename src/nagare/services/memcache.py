@@ -1,5 +1,5 @@
 # --
-# Copyright (c) 2008-2023 Net-ng.
+# Copyright (c) 2008-2024 Net-ng.
 # All rights reserved.
 #
 # This software is licensed under the BSD License, as described in
@@ -9,21 +9,22 @@
 
 from __future__ import absolute_import
 
-from functools import partial
 import time
+from functools import partial
 
 try:
     import urlparse
 except ImportError:
     import urllib.parse as urlparse
 import memcache
+
 from nagare.services import plugin
 
 KEY_PREFIX = 'nagare_%d_'
 
 
 class Lock(object):
-    def __init__(self, connection, lock_id, ttl, poll_time, max_wait_time, noreply=False):
+    def __init__(self, connection, lock_id, ttl, poll_time, max_wait_time):
         """Distributed lock in memcache.
 
         In:
@@ -38,7 +39,6 @@ class Lock(object):
         self.ttl = ttl
         self.poll_time = poll_time
         self.max_wait_time = max_wait_time
-        self.noreply = False
 
     def acquire(self):
         """Acquire the lock."""
@@ -46,8 +46,8 @@ class Lock(object):
         t0 = time.time()
 
         while time.time() < (t0 + self.max_wait_time):
-            status = self.connection.add(self.lock, 1, self.ttl, noreply=self.noreply)
-            if status or (type(status) is int):
+            status = self.connection.add(self.lock, 1, self.ttl)
+            if status or (type(status) is int):  # noqa: E721
                 break
 
             attempt += 1
@@ -188,7 +188,7 @@ class Memcache(plugin.Plugin):
         memcached = memcache.Client(self.hosts, debug=self.debug)
         memcached.flush_all()
 
-    def get_lock(self, lock_id, lock_ttl, lock_poll_time, lock_max_wait_time, noreply=False):
+    def get_lock(self, lock_id, lock_ttl, lock_poll_time, lock_max_wait_time):
         """Retrieve the lock of a session.
 
         In:
@@ -197,4 +197,4 @@ class Memcache(plugin.Plugin):
         Return:
           - the lock
         """
-        return Lock(self, lock_id, lock_ttl, lock_poll_time, lock_max_wait_time, noreply)
+        return Lock(self, lock_id, lock_ttl, lock_poll_time, lock_max_wait_time)

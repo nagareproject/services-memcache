@@ -1,5 +1,5 @@
 # --
-# Copyright (c) 2008-2024 Net-ng.
+# Copyright (c) 2014-2025 Net-ng.
 # All rights reserved.
 #
 # This software is licensed under the BSD License, as described in
@@ -25,13 +25,13 @@ class Stats(command.Command):
         print('{} server{} found\n'.format(nb_servers, '' if nb_servers == 1 else 's'))
 
         for server, stats in sorted(stats):
-            print('{}:'.format(server))
+            print(f'{server}:')
 
             if not stats:
                 print('  <empty>')
             else:
                 for stat, value in sorted(stats.items()):
-                    print('  - {}: {}'.format(stat, value))
+                    print(f'  - {stat}: {value}')
 
         return nb_servers == 0
 
@@ -46,7 +46,7 @@ class Report(Stats):
             help='name of report to display',
         )
 
-        super(Report, self).set_arguments(parser)
+        super().set_arguments(parser)
 
 
 class Flush(command.Command):

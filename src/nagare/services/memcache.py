@@ -1,5 +1,5 @@
 # --
-# Copyright (c) 2008-2024 Net-ng.
+# Copyright (c) 2014-2025 Net-ng.
 # All rights reserved.
 #
 # This software is licensed under the BSD License, as described in
@@ -7,15 +7,10 @@
 # this distribution.
 # --
 
-from __future__ import absolute_import
-
 import time
+import urllib.parse as urlparse
 from functools import partial
 
-try:
-    import urlparse
-except ImportError:
-    import urllib.parse as urlparse
 import memcache
 
 from nagare.services import plugin
@@ -23,7 +18,7 @@ from nagare.services import plugin
 KEY_PREFIX = 'nagare_%d_'
 
 
-class Lock(object):
+class Lock:
     def __init__(self, connection, lock_id, ttl, poll_time, max_wait_time):
         """Distributed lock in memcache.
 
@@ -71,26 +66,25 @@ class Memcache(plugin.Plugin):
     """Sessions manager for sessions kept in an external memcached server."""
 
     LOAD_PRIORITY = 75
-    CONFIG_SPEC = dict(
-        plugin.Plugin.CONFIG_SPEC,
-        uri='string(default=None)',
-        socket='string(default=None)',
-        host='string(default="127.0.0.1")',
-        port='integer(default=11211)',
-        weight='integer(default=1)',
-        debug='boolean(default=False)',
-        max_key_length='integer(default={})'.format(memcache.SERVER_MAX_KEY_LENGTH),
-        max_value_length='integer(default=0)',
-        dead_retry='integer(default={})'.format(memcache._DEAD_RETRY),
-        check_keys='boolean(default=False)',
-        __many__={
+    CONFIG_SPEC = plugin.Plugin.CONFIG_SPEC | {
+        'uri': 'string(default=None)',
+        'socket': 'string(default=None)',
+        'host': 'string(default="127.0.0.1")',
+        'port': 'integer(default=11211)',
+        'weight': 'integer(default=1)',
+        'debug': 'boolean(default=False)',
+        'max_key_length': 'integer(default={})'.format(memcache.SERVER_MAX_KEY_LENGTH),
+        'max_value_length': 'integer(default=0)',
+        'dead_retry': 'integer(default={})'.format(memcache._DEAD_RETRY),
+        'check_keys': 'boolean(default=False)',
+        '__many__': {
             'uri': 'string(default=None)',
             'socket': 'string(default=None)',
             'host': 'string(default="127.0.0.1")',
             'port': 'integer(default=11211)',
             'weight': 'integer(default=1)',
         },
-    )
+    }
 
     def __init__(
         self,
@@ -115,7 +109,7 @@ class Memcache(plugin.Plugin):
           - ``port`` -- port of the memcache server
           - ``debug`` -- display the memcache requests / responses
         """
-        super(Memcache, self).__init__(
+        super().__init__(
             name,
             dist,
             uri=uri,
